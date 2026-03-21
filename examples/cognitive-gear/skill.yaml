@@ -1,0 +1,52 @@
+name: cognitive-gear
+version: 1.0.0
+description: >
+  Cognitive gear system — three operational modes (SPRINT, CRUISE, DEEP DIVE)
+  that control model selection and memory search depth. Switch between speed,
+  balance, and full research stack with a single command.
+author:
+  name: smilinTux
+  email: admin@smilintux.org
+
+knowledge:
+  - path: knowledge/SKILL.md
+    description: Mode definitions, memory protocols, and switching instructions
+    auto_load: true
+
+tools:
+  - name: gear_switch
+    description: Switch cognitive gear (sprint/cruise/deep). Sets model and memory protocol.
+    entrypoint: tools/gear.py:gear_switch
+    input_schema:
+      type: object
+      properties:
+        mode:
+          type: string
+          enum: [sprint, cruise, deep]
+          description: "Target gear: sprint (fast), cruise (balanced), deep (research)"
+      required:
+        - mode
+    timeout_s: 10
+
+  - name: gear_status
+    description: Show current cognitive gear and its configuration.
+    entrypoint: tools/gear.py:gear_status
+    input_schema:
+      type: object
+      properties: {}
+      required: []
+    timeout_s: 5
+
+hooks:
+  - event: on_boot
+    entrypoint: hooks/on_boot.py:set_default_gear
+    description: Set default gear to CRUISE on agent startup
+
+tags:
+  - cognition
+  - model-selection
+  - memory
+  - performance
+  - sovereign
+
+python_requires: ">=3.10"

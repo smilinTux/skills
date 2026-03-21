@@ -193,6 +193,23 @@ skills:
     tags: [agent, scaffold, sovereign, quickstart, framework]
     category: core
 
+  # ── Cognitive Skills ────────────────────────────────────────────────────────
+
+  - name: cognitive-gear
+    git: https://github.com/smilinTux/skskills
+    git_path: examples/cognitive-gear
+    description: >
+      Cognitive gear system — three operational modes (SPRINT, CRUISE, DEEP DIVE)
+      that control model selection and memory search depth. Switch between fast
+      execution, balanced work, and full research stack with a single command.
+    tags: [cognition, model-selection, memory, performance, sovereign]
+    category: cognitive
+    tools:
+      - gear_switch
+      - gear_status
+    hooks:
+      - on_boot
+
   # ── Example / Reference Skills ────────────────────────────────────────────
 
   - name: syncthing-setup
