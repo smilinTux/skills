@@ -210,6 +210,21 @@ skills:
     hooks:
       - on_boot
 
+  # ── Operations Skills ───────────────────────────────────────────────────────
+
+  - name: itil-ops
+    git: https://github.com/smilinTux/skskills
+    git_path: examples/itil-ops
+    description: >
+      ITIL 4 aligned incident, problem, and change management for AI agents.
+      Automated detection of service crashes, cron failures, resource pressure,
+      and data integrity issues. Pattern-based escalation from incidents to
+      problems. Root cause analysis workflows, change management checklists,
+      and continual improvement KPIs. Works with systemd, journalctl, cron,
+      and coordination task boards.
+    tags: [itil, incident, problem, change, ops, monitoring, sre, devops]
+    category: operations
+
   # ── Example / Reference Skills ────────────────────────────────────────────
 
   - name: syncthing-setup
