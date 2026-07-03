@@ -1,0 +1,15 @@
+# server-name → connection spec. Source of truth: ~/.skcapstone/docs/PORTS.md.
+# `publish_as: null` means the server has no publishable HTTP form (blocks at gate).
+servers:
+  skchat:
+    type: stdio
+    command: "~/.skenv/bin/skchat-mcp"     # skchat.mcp_server:main — stdio ONLY, no port
+    publish_as: null
+  skcomms:
+    type: http
+    url: "http://127.0.0.1:9384/api/v1/inbox"     # SKComms federation (NOT skchat)
+    publish_as: "~~sovereign comms"
+  sk-access:
+    type: sse
+    url: "http://noroc2027.tail204f0c.ts.net:9386/sse"   # MagicDNS, tailnet-only
+    publish_as: "~~sovereign access plane"
