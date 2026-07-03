@@ -18,7 +18,11 @@ _PATTERNS: list[tuple[str, re.Pattern]] = [
     ("private-endpoint", re.compile(r"\b127\.0\.0\.1\b")),
     ("private-endpoint", re.compile(r"\b10\.\d{1,3}\.\d{1,3}\.\d{1,3}\b")),
     ("private-endpoint", re.compile(r"\b192\.168\.\d{1,3}\.\d{1,3}\b")),
-    ("private-endpoint", re.compile(r"\b100\.(?:6[4-9]|[7-9]\d|1[01]\d|12[0-7])\.\d{1,3}\.\d{1,3}\b")),
+    (
+        "private-endpoint",
+        re.compile(r"\b100\.(?:6[4-9]|[7-9]\d|1[01]\d|12[0-7])\.\d{1,3}\.\d{1,3}\b"),
+    ),
+    ("private-endpoint", re.compile(r"\b172\.(?:1[6-9]|2\d|3[01])\.\d{1,3}\.\d{1,3}\b")),
     ("private-endpoint", re.compile(r"[A-Za-z0-9-]+\.ts\.net\b")),
 ]
 

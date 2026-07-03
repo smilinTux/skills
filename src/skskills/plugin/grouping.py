@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import importlib.resources
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Optional
@@ -84,8 +83,14 @@ def group(records: list[SkillRecord], defs: list[PluginDef]) -> list[PluginSpec]
         mcp = sorted({s for rec in members for s in _skill_mcp(rec)})
         specs.append(
             PluginSpec(
-                name=d.name, axis=d.axis, version=d.version, description=d.description,
-                author=d.author, skills=members, mcp_servers=mcp, publish=d.publish,
+                name=d.name,
+                axis=d.axis,
+                version=d.version,
+                description=d.description,
+                author=d.author,
+                skills=members,
+                mcp_servers=mcp,
+                publish=d.publish,
             )
         )
     return specs

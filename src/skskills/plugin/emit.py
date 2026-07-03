@@ -65,7 +65,9 @@ def _unpublishable(servers: list[str], registry: dict) -> list[str]:
     return warns
 
 
-def emit_plugin(spec: PluginSpec, registry: dict, out_root: Path, target: str = "internal") -> EmitResult:
+def emit_plugin(
+    spec: PluginSpec, registry: dict, out_root: Path, target: str = "internal"
+) -> EmitResult:
     """Write plugin.json + .mcp.json (+ CONNECTORS.md when placeholders exist)."""
     pdir = out_root / spec.name
     (pdir / ".claude-plugin").mkdir(parents=True, exist_ok=True)
@@ -111,8 +113,7 @@ def emit_marketplace(specs: list[PluginSpec], out_root: Path) -> Path:
         "name": "skworld-marketplace",
         "owner": {"name": "smilinTux"},
         "plugins": [
-            {"name": s.name, "source": f"./{s.name}", "description": s.description}
-            for s in specs
+            {"name": s.name, "source": f"./{s.name}", "description": s.description} for s in specs
         ],
     }
     out_root.mkdir(parents=True, exist_ok=True)

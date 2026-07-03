@@ -68,3 +68,15 @@ def test_emit_marketplace(tmp_path):
     doc = json.loads(p.read_text())
     assert doc["plugins"][0]["name"] == "skcomms"
     assert doc["plugins"][0]["source"] == "./skcomms"
+
+
+def test_publish_target_emits_no_real_url_and_passes_scrub(tmp_path):
+    from skskills.plugin.scrub import gate_publish
+
+    spec = _spec(["skcomms", "skchat"], publish=True)
+    res = emit_plugin(spec, REGISTRY, tmp_path, target="publish")
+    mcp_text = (tmp_path / "skcomms" / ".mcp.json").read_text()
+    assert "127.0.0.1" not in mcp_text   # real internal URL must never reach a publish artifact
+    assert "9384" not in mcp_text
+    ok, reasons = gate_publish(spec, res.out_dir, confirmed=True)
+    assert ok is True, reasons

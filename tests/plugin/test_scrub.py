@@ -50,3 +50,19 @@ def test_gate_passes_when_all_clear(tmp_path):
     ok, reasons = gate_publish(_spec(publish=True), tmp_path, confirmed=True)
     assert ok is True
     assert reasons == []
+
+
+def test_scan_catches_tailnet_tsnet_and_172(tmp_path):
+    (tmp_path / "a.json").write_text('{"u": "http://100.101.5.6:9386"}')       # 100.64/10 in-range
+    (tmp_path / "b.json").write_text('{"u": "http://foo.tail204f0c.ts.net:9386/sse"}')  # MagicDNS
+    (tmp_path / "c.json").write_text('{"u": "http://172.17.0.2:5432"}')        # 172.16/12 (docker)
+    hits = {(f.kind, f.file.name) for f in scan_dir(tmp_path)}
+    assert ("private-endpoint", "a.json") in hits
+    assert ("private-endpoint", "b.json") in hits
+    assert ("private-endpoint", "c.json") in hits
+
+
+def test_scan_ignores_out_of_range_100_block(tmp_path):
+    # 100.63.x and 100.128.x are OUTSIDE the tailnet CGNAT 100.64-127 range; 100.5.x is public
+    (tmp_path / "ok.json").write_text('{"a": "100.63.1.1", "b": "100.128.1.1", "c": "100.5.5.5"}')
+    assert scan_dir(tmp_path) == []
