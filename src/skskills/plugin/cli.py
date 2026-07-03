@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import json
 import re
+import shutil
+import subprocess
 from pathlib import Path
 from typing import Optional
 
@@ -120,6 +122,22 @@ def publish(only, roots, catalog, registry, out, confirmed) -> None:
 @plugin.command()
 @click.argument("ref")
 def add(ref) -> None:
-    """Inbound: show the command to install an external marketplace/plugin."""
-    click.echo(f"Run: claude plugin marketplace add {ref}")
-    click.echo("Then register its .mcp.json via: skcapstone register")
+    """Inbound: install an external marketplace/plugin, then propagate its MCP
+    servers into all detected environments (best-effort, never fatal)."""
+    if shutil.which("claude"):
+        click.echo(f"Installing: claude plugin marketplace add {ref}")
+        try:
+            subprocess.run(["claude", "plugin", "marketplace", "add", ref], check=False)
+        except Exception as e:  # noqa: BLE001 - best-effort, must not crash
+            click.echo(f"warn: claude plugin marketplace add failed: {e}")
+    else:
+        click.echo(f"Run: claude plugin marketplace add {ref}")
+
+    if shutil.which("skcapstone"):
+        click.echo("Registering: skcapstone register")
+        try:
+            subprocess.run(["skcapstone", "register"], check=False)
+        except Exception as e:  # noqa: BLE001 - best-effort, must not crash
+            click.echo(f"warn: skcapstone register failed: {e}")
+    else:
+        click.echo("Then register via: skcapstone register")
