@@ -56,6 +56,13 @@ def test_emit_plugin_publish_warns_on_unpublishable(tmp_path):
     assert conn_path.read_text().startswith("# Connectors")
 
 
+def test_emit_plugin_internal_no_connectors_for_concrete_servers(tmp_path):
+    # skcomms resolves to a real URL on internal target → no placeholder → no CONNECTORS.md
+    res = emit_plugin(_spec(["skcomms"]), REGISTRY, tmp_path, target="internal")
+    assert not (tmp_path / "skcomms" / "CONNECTORS.md").is_file()
+    assert all("CONNECTORS.md" not in f.name for f in res.files)
+
+
 def test_emit_marketplace(tmp_path):
     p = emit_marketplace([_spec(["skchat"])], tmp_path)
     doc = json.loads(p.read_text())

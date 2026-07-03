@@ -65,15 +65,6 @@ def _unpublishable(servers: list[str], registry: dict) -> list[str]:
     return warns
 
 
-def _placeholders_used(servers: list[str], registry: dict) -> list[str]:
-    ph = []
-    for name in servers:
-        pa = registry.get(name, {}).get("publish_as")
-        if pa:
-            ph.append(pa)
-    return ph
-
-
 def emit_plugin(spec: PluginSpec, registry: dict, out_root: Path, target: str = "internal") -> EmitResult:
     """Write plugin.json + .mcp.json (+ CONNECTORS.md when placeholders exist)."""
     pdir = out_root / spec.name
@@ -96,7 +87,7 @@ def emit_plugin(spec: PluginSpec, registry: dict, out_root: Path, target: str = 
     mcp_path.write_text(json.dumps(mcp, indent=2) + "\n")
     files.append(mcp_path)
 
-    placeholders = _placeholders_used(spec.mcp_servers, registry)
+    placeholders = [k for k in mcp["mcpServers"] if k.startswith("~~")]
     if target == "publish":
         warnings.extend(_unpublishable(spec.mcp_servers, registry))
     if placeholders or target == "publish":
