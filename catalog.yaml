@@ -406,3 +406,17 @@ skills:
     description: "Optimize React and Next.js apps with Vercel best practices for components, pages, and data fetching."
     tags: [react, nextjs, frontend, reference]
     category: reference
+
+# ── Plugin views (Anthropic envelope grouping) ──────────────────────────────
+plugins:
+  - name: skcomms
+    axis: component
+    version: "0.1.0"
+    description: >
+      Sovereign encrypted comms — inline skchat, presence, groups, over the
+      capauth-signed transport. Thin front-ends over the skchat MCP server.
+    author:
+      name: "Chef & Lumina"
+    include_tags: [skchat, messaging, p2p, mcp]
+    include_names: [chat]
+    publish: false
