@@ -65,6 +65,7 @@ where = ["src"]
 
 [tool.setuptools.package-data]
 skskills = ["catalog.yaml"]
+"skskills.plugin" = ["*.yaml"]
 
 [tool.black]
 line-length = 99

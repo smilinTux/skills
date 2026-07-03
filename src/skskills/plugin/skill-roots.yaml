@@ -1,0 +1,17 @@
+# src/skskills/plugin/skill-roots.yaml
+# Canonical skill homes to scan. `~` expands to the user's home.
+# A path containing `*` is treated as a glob (globbed at discovery time).
+# role: canonical wins on name collisions; others recorded as alternates.
+roots:
+  - { path: "~/clawd/skskills/skills",            runtime: skskills,    role: canonical }
+  - { path: "~/.skskills/installed",              runtime: skskills,    role: registry }
+  - { path: "~/.skskills/agents/*",               runtime: skskills,    role: registry }
+  - { path: "~/clawd/skills",                     runtime: claude-code, role: incubator }
+  - { path: "~/.claude/skills",                   runtime: claude-code, role: personal }
+  - { path: "~/.hermes/skills",                   runtime: hermes,      role: runtime }
+  - { path: "~/.hermes/profiles/*/skills",        runtime: hermes,      role: runtime }
+  - { path: "~/clawd/skcapstone-repos/*/skills",  runtime: repo,        role: repo }
+  - { path: "~/.config/opencode/skills",          runtime: opencode,    role: future-hook }
+  - { path: "~/.codex/skills",                    runtime: codex,       role: future-hook }
+# Import Hermes's own skills_hub list from ~/.hermes/config.yaml if present.
+import_hermes_skills_hub: true
