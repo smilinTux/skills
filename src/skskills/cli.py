@@ -28,6 +28,7 @@ from .models import (
     generate_skill_yaml,
 )
 from .registry import SkillRegistry
+from skskills.plugin.cli import plugin as plugin_group
 
 console = Console()
 
@@ -40,6 +41,9 @@ def main() -> None:
     MCP-native skill management replacing OpenClaw.
     Install, run, and manage skills that extend sovereign agents.
     """
+
+
+main.add_command(plugin_group, name="plugin")
 
 
 @main.command()
