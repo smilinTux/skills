@@ -1,0 +1,37 @@
+name: bot-roundtrip-canary
+version: "1.0.0"
+description: >
+  Synthetic bot/comms round-trip probe. Sends a uniquely-tagged message through the
+  fleet's bot send path and confirms the same tag returns on the receive path within a
+  deadline. Exits non-zero and fires sk-alert on failure. Catches silent wedges the
+  process-up health checks miss (Telegram bridge ConnectTimeout hang, dead receive-tree).
+category: monitoring
+tags: [canary, monitoring, telegram, sk-alert, heartbeat, round-trip, probe, comms]
+author:
+  name: Chef & Lumina
+  email: dounoit@gmail.com
+license: MIT
+
+requires:
+  python: ">=3.8"       # stdlib only (urllib, json, argparse) - no third-party deps
+  cli:
+    - sk-alert          # optional: alert sink on failure (skip with --no-alert)
+
+config:
+  env:
+    - TELEGRAM_BOT_TOKEN     # read from env or ~/.hermes/.env; NEVER stored in skill
+    - SKCANARY_CHAT_ID       # target chat (falls back to SKALERT_CHAT_ID)
+    - SKCANARY_TIMEOUT       # deadline seconds (default 30)
+    - SKCANARY_POLL_INTERVAL # poll cadence seconds (default 2)
+    - SKCANARY_TAG_PREFIX    # probe tag prefix (default SKCANARY)
+
+invocation:
+  type: script
+  entrypoint: canary.py
+  doc: SKILL.md
+
+usage: |
+  python3 canary.py --chat-id "$SKALERT_CHAT_ID" --timeout 30 --verbose
+  python3 canary.py --json
+  python3 -m pytest tests/ -q
+  # exit 0 = round-trip OK, 1 = failed (alert fired), 2 = misconfig

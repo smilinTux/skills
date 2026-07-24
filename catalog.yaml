@@ -285,6 +285,20 @@ skills:
     tags: [skchat, claude-code, slash-command, presence, mcp, p2p]
     category: communication
 
+  # ── Monitoring ─────────────────────────────────────────────────────────────
+
+  - name: bot-roundtrip-canary
+    git: https://github.com/smilinTux/skskills
+    git_path: skills/bot-roundtrip-canary
+    description: >
+      Synthetic bot/comms round-trip probe. Sends a uniquely-tagged message through
+      the fleet's bot send path and confirms the same tag returns on the receive path
+      within a deadline, exiting non-zero and firing sk-alert on failure. Catches
+      silent wedges the process-up checks miss (Telegram bridge ConnectTimeout hang,
+      dead receive-tree). Stdlib-only; transport seam is unit-tested with a mock.
+    tags: [canary, monitoring, telegram, sk-alert, heartbeat, round-trip, probe]
+    category: monitoring
+
   # -- Operational Skills (first-party, local Claude Code skills) --------------
 
   - name: google-workspace
