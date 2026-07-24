@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""bot-roundtrip-canary — synthetic probe for the fleet's bot / comms round-trip.
+"""bot-roundtrip-canary: synthetic probe for the fleet's bot / comms round-trip.
 
 Sends a uniquely-tagged message through a bot/comms *send* path, then watches the
 *receive* path for the same tag to come back within a deadline. If the tag does not
