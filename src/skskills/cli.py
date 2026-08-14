@@ -19,6 +19,8 @@ import click
 from rich.console import Console
 from rich.table import Table
 
+from skskills.plugin.cli import plugin as plugin_group
+
 from . import __version__
 from .models import (
     KnowledgePack,
@@ -28,7 +30,6 @@ from .models import (
     generate_skill_yaml,
 )
 from .registry import SkillRegistry
-from skskills.plugin.cli import plugin as plugin_group
 
 console = Console()
 
