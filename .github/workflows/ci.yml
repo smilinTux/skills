@@ -14,7 +14,9 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - run: pip install ruff
+      # Pinned: an unpinned linter means main can go red with no code change,
+      # the moment ruff ships a new rule. Matches the pin skchat uses.
+      - run: pip install ruff==0.15.4
       - run: ruff check src/
 
   test:
