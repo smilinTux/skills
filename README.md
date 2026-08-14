@@ -74,7 +74,7 @@ skskills publish ./my-skill --token …     # publish to the remote registry (Ca
 
 | Piece | What it is |
 |---|---|
-| **`skill.yaml` manifest** | the Pydantic-validated skill schema — name, version, author, knowledge/tools/hooks, deps, optional CapAuth signature (`models.py`) |
+| **`skill.yaml` manifest** | the Pydantic-validated skill schema: name, version, author, knowledge/tools/hooks, deps, and an optional CapAuth signature **field** that is currently stored and displayed but never verified (`models.py`) |
 | **Registry** | local-first install/uninstall/enable/disable/search with **per-agent + global namespaces** under `~/.skskills/` (`registry.py`) |
 | **Loader** | resolves each tool/hook entrypoint to a callable (dotpath, `.py` file, or executable script) and wraps the skill as a `SkillServer` (`loader.py`) |
 | **Aggregator** | one MCP server that discovers all enabled skills and proxies their tools/resources; reports health + tool-name collisions (`aggregator.py`) |
@@ -104,7 +104,7 @@ through **capauth**.
 flowchart TD
     subgraph CORE["Core (identity · capabilities · governance)"]
       SKSKILLS["**skskills**<br/>manifest · registry · loader · aggregator · catalog"]
-      CAPAUTH["capauth<br/>(PGP signatures on skill.yaml — optional)"]
+      CAPAUTH["capauth<br/>(PGP identity; signature verification<br/>is NOT yet implemented here)"]
       SKCAP["skcapstone<br/>(agent runtime; ~/.skcapstone/skills built-ins)"]
     end
 
@@ -127,7 +127,7 @@ flowchart TD
     CATALOG --> SKSKILLS
     REMOTE --> SKSKILLS
 
-    CAPAUTH -.->|"verify signature"| SKSKILLS
+    CAPAUTH -.->|"signature field only<br/>(unverified, see SECURITY.md)"| SKSKILLS
     SKCAP -->|"list_installed · built-in skills"| SKSKILLS
     SKSKILLS -->|"one aggregator MCP server (stdio)"| CC
     SKSKILLS -->|"skill.tool · skill://resource"| OTHER
@@ -136,6 +136,22 @@ flowchart TD
 See **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)** for the install/load/serve
 lifecycle, the entrypoint-resolution rules, the namespace + collision model, and
 the full source map.
+
+### Docs index
+
+| Doc | Read it for |
+|---|---|
+| **[SOP.md](SOP.md)** | The operational source of truth: build, test, release, the ten skill-discovery roots, the CLI and MCP reference, and a Symptom/Check troubleshooting table. **Start here.** |
+| [SECURITY.md](SECURITY.md) | Threat model, reporting channel and 72h SLA, and the honest statement of what skskills does **not** verify. |
+| [CONTRIBUTING.md](CONTRIBUTING.md) | Branch model, the real test gate (CI is not one), commit convention. |
+| [CHANGELOG.md](CHANGELOG.md) | Release history, and why the version numbers here disagree with each other. |
+| [docs/DEPENDENTS.md](docs/DEPENDENTS.md) | Who consumes skskills and how tightly. |
+
+**Maturity-tier:** T0 (classical). skskills is not a crypto component: it performs no
+key exchange and no signing, and uses SHA-256 only for tarball integrity. The
+`signature` / `signed_by` manifest fields are stored and displayed but **never
+verified**; see [SECURITY.md](SECURITY.md) before treating a "signed" skill as
+trusted.
 
 ## A skill manifest
 

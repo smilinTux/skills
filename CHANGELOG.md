@@ -1,0 +1,163 @@
+# Changelog
+
+All notable changes to skskills are documented here.
+
+Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
+Versioning intent: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+> **Read this before trusting a version number here.** This file was reconstructed
+> from git history on 2026-08-14; it did not exist before then, so entries dated
+> earlier than that are a best-effort reconstruction from commits and tags, not a
+> record written at release time. Two independent drifts make the numbering
+> unreliable, and both are open:
+>
+> 1. **Five files declare a version and they disagree.** `pyproject.toml` and
+>    `src/skskills/__init__.py` say 0.2.0; `package.json`, `skill.yaml`, and
+>    `SKILL.md` say 0.1.0. The npm artifact and the PyPI artifact are built from the
+>    same commit and announce different versions.
+> 2. **The git tags do not follow either of them.** Three tags exist on `origin`:
+>    `v0.1.1`, `v1.1.0`, and `v1.1.1`, and they were not created in version order.
+>    `v1.1.0` points at a 2026-03-21 commit, `v0.1.1` at 2026-04-12, `v1.1.1` at
+>    2026-06-10. No `v0.2.0` tag exists despite `pyproject.toml` declaring 0.2.0.
+>
+> The durable fix is deriving the version from the git tag (setuptools-scm) instead
+> of hardcoding it in five places. See
+> [SOP.md §5.2](SOP.md#52-version-bump-read-this-before-tagging).
+
+---
+
+## [Unreleased]
+
+### Added
+- `SOP.md`, `SECURITY.md`, `CONTRIBUTING.md`, `CODE_OF_CONDUCT.md`, and this
+  `CHANGELOG.md`, bringing the repo to SK_REPO_DOC_STANDARD.
+- `.github/workflows/docs-check.yml`, running the shared sk-standards docs gate at
+  tiers 1 and 2.
+- A `docs-evidence` block at the end of `SOP.md`: eight repo-local checks that fail
+  when a documented entry point, default, root count, or known defect drifts.
+
+### Documented (no code change)
+- **The multi-root skill topology.** `src/skskills/plugin/skill-roots.yaml` declares
+  ten skill homes across four runtimes, with `role` breaking name collisions.
+  `~/clawd/skskills/skills` is `role: canonical` and holds four skills; the
+  `role: incubator` root `~/clawd/skills` holds 83. The convention "author skills in
+  the canonical root only" is a migration target, not the present state.
+- **The signature gap.** `SkillManifest.signature` / `signed_by` are stored and
+  displayed, and `is_signed()` is a non-empty-string check. No PGP verification code
+  exists anywhere in `src/`. Recorded in `SECURITY.md` as a gap, not a mitigation.
+- **The root `skill.yaml` points at a module that does not exist.** It declares
+  `skskills.skill:list_tools`, `:install`, `:catalog`, and `:run_tool`, but
+  `src/skskills/skill.py` is absent from `origin/main`. Any consumer resolving those
+  dotpaths fails. The working tool surface is the aggregator's.
+- **CI cannot fail on a test failure.** `ci.yml` runs pytest with `|| true`;
+  `publish.yml` repeats that job and declares both publish jobs with `needs: test`
+  plus `if: always()`, so a total test failure still ships to PyPI and npm. Tracked
+  as coordination card **62a5256d**. Left in place by this docs pass because the
+  suite is currently 133 passed / 1 failed, and removing `|| true` first would only
+  turn `main` red.
+- **The failing test is not hermetic.**
+  `tests/plugin/test_pilot_skcomms.py::test_skcomms_builds_and_validates` invokes
+  `skskills plugin build` with no `--roots` override, so discovery walks the
+  developer's real skill homes; `plugin/discovery.py:32` reads each `SKILL.md`
+  unguarded and a dangling symlink aborts the whole walk.
+
+### Not changed
+- The license stays **GPL-3.0-or-later**. `LICENSE` is verbatim GPLv3 and both
+  `pyproject.toml` and `package.json` already declare it.
+
+---
+
+## [0.2.0] - 2026-07-03
+
+No `v0.2.0` tag was ever pushed. This is the version declared in `pyproject.toml` and
+`src/skskills/__init__.py`.
+
+### Added
+- **The `skskills plugin` compiler**, a new command group that compiles discovered
+  skills into the Anthropic plugin / marketplace envelope:
+  - `plugin/discovery.py`: discovery across every configured skill home, with dedup
+    and role-ranked precedence.
+  - `plugin/grouping.py`: plugin views over skills, driven by the top-level
+    `plugins:` list in `catalog.yaml`.
+  - `plugin/emit.py`: emits `.claude-plugin/plugin.json`, `.mcp.json`,
+    `CONNECTORS.md`, and `marketplace.json`.
+  - `plugin/scrub.py`: an outbound safety gate scanning emitted artifacts for
+    secrets and private endpoints, with `publish` additionally requiring
+    `publish: true` in the catalog and an explicit `--i-am-chef` flag.
+  - `plugin/cli.py`: `discover`, `build`, `validate`, `publish`, `add`.
+- `plugin add` wires through to `claude plugin marketplace add` and
+  `skcapstone register`, best-effort and never fatal.
+- The skcomms pilot plugin definition and an end-to-end golden test.
+- `docs/DEPENDENTS.md`, mapping who consumes skskills and how tightly.
+
+### Fixed
+- Scrub coverage extended to the `172.16.0.0/12` private range.
+- Restored the `src/skskills/catalog.yaml` symlink after a merge dropped it.
+- Removed a dead import flagged in final review.
+
+---
+
+## [Untagged] - 2026-07-24
+
+### Added
+- `skills/bot-roundtrip-canary`: a bot round-trip canary skill (coordination card
+  08a1e578).
+
+## [Untagged] - 2026-06-13
+
+### Changed
+- Renamed all `skcomm` references to `skcomms`.
+
+## [v1.1.1] - 2026-06-10
+
+Tagged out of version order; see the note at the top of this file.
+
+### Added
+- `skills/chat` and `skills/who`: Claude Code skills that front the skchat MCP
+  server.
+- `README.md` and `docs/ARCHITECTURE.md` for the skills platform.
+
+### Fixed
+- Corrected the default install path and added a local-skill source.
+
+## [0.1.1] - 2026-04-12
+
+Tagged `v0.1.1`.
+
+### Added
+- `skills/unhinged-mode` and its catalog entry.
+- The `itil-ops` skill example.
+
+### Fixed
+- Corrected the `unhinged-mode` `skill.yaml` author format.
+- Tracked the `l1b3rt4s` and `obliteratus` library directories as regular files.
+
+## [v1.1.0] - 2026-03-21
+
+Tagged out of version order; see the note at the top of this file.
+
+### Added
+- The `cognitive-gear` skill: SPRINT / CRUISE / DEEP DIVE operational modes.
+
+## [Untagged] - 2026-03-04
+
+### Added
+- `package.json` and the npm publish workflow, making `@smilintux/skskills` a second
+  published artifact alongside the PyPI package.
+- The root `skill.yaml` manifest and the publish workflows.
+- The pip-install plus catalog architecture, replacing git submodules as the
+  delivery mechanism.
+
+## [Untagged] - 2026-02-27
+
+### Added
+- The remote registry client: `publish`, `pull`, and `clone` against a community hub
+  at `skills.smilintux.org/api`, with SHA-256 tarball integrity checking.
+- `SKILL.md` with the CLI reference and the skill-primitives documentation.
+
+## [Untagged] - 2026-02-26
+
+### Added
+- Initial skskills framework: the `skill.yaml` manifest model, the local registry
+  with global and per-agent namespaces, the entrypoint loader, and the stdio MCP
+  aggregator. Positioned as the OpenClaw replacement.
