@@ -27,9 +27,23 @@ _ROLE_PRECEDENCE = {
 }
 
 
-def parse_frontmatter(skill_md: Path) -> dict:
-    """Return the YAML frontmatter block of a SKILL.md, or {} if absent/invalid."""
-    text = skill_md.read_text(encoding="utf-8", errors="replace")
+def _read_skill_md(skill_md: Path) -> Optional[str]:
+    """Read a SKILL.md, or return None (with a WARNING) if it cannot be read.
+
+    A dangling symlink, a permission error or a vanished file must never abort the
+    whole discovery walk: one broken link would silently disable skill discovery
+    across every configured root. Per OBSERVABILITY_AND_SCHEDULING nothing fails
+    silently, so the path and the reason are logged at WARNING.
+    """
+    try:
+        return skill_md.read_text(encoding="utf-8", errors="replace")
+    except OSError as exc:
+        logger.warning("skipping unreadable SKILL.md %s: %s", skill_md, exc)
+        return None
+
+
+def _frontmatter_from_text(text: str) -> dict:
+    """Parse the YAML frontmatter out of an already-read SKILL.md body."""
     if not text.startswith("---"):
         return {}
     parts = text.split("---", 2)
@@ -40,6 +54,17 @@ def parse_frontmatter(skill_md: Path) -> dict:
     except yaml.YAMLError:
         return {}
     return data if isinstance(data, dict) else {}
+
+
+def parse_frontmatter(skill_md: Path) -> dict:
+    """Return the YAML frontmatter block of a SKILL.md, or {} if absent/invalid.
+
+    Never raises on an unreadable file: an unreadable SKILL.md yields {}.
+    """
+    text = _read_skill_md(skill_md)
+    if text is None:
+        return {}
+    return _frontmatter_from_text(text)
 
 
 def _bundled_roots_path() -> Path:
@@ -103,14 +128,23 @@ def discover(roots: list[Root]) -> list[SkillRecord]:
             for skill_md in sorted(base.glob("*/SKILL.md")):
                 sdir = skill_md.parent
                 name = sdir.name
-                fm = parse_frontmatter(skill_md)
+                text = _read_skill_md(skill_md)
+                if text is None:
+                    # Unreadable (dangling symlink, permissions, race). Skip this
+                    # one skill and keep walking: a single broken link must not
+                    # take down discovery across every root.
+                    continue
+                fm = _frontmatter_from_text(text)
                 yaml_path = sdir / "skill.yaml"
                 sy = None
                 if yaml_path.is_file():
                     try:
-                        sy = yaml.safe_load(yaml_path.read_text()) or {}
-                    except yaml.YAMLError:
+                        sy = yaml.safe_load(yaml_path.read_text())
+                    except (OSError, yaml.YAMLError) as exc:
+                        logger.warning("skipping unreadable skill.yaml %s: %s", yaml_path, exc)
                         sy = None
+                    else:
+                        sy = sy or {}
                 rec = SkillRecord(
                     name=name,
                     path=sdir,

@@ -148,8 +148,10 @@ publish and nothing is written to the target.
 
 > **Warning: `plugin discover` and `plugin build` are not hermetic.** With no
 > `--roots` override they load the bundled `skill-roots.yaml` and walk the real
-> filesystem of the machine they run on. A single unreadable `SKILL.md` anywhere in
-> those roots aborts the whole walk (see [§8](#8-troubleshooting)). Neither
+> filesystem of the machine they run on, so their output depends on host state.
+> An unreadable `SKILL.md` no longer aborts the walk: it is skipped and logged at
+> WARNING (`discovery._read_skill_md`), so the skill silently missing from the
+> output is the failure mode to look for (see [§8](#8-troubleshooting)). Neither
 > `plugin build` nor `plugin validate` runs in CI.
 
 ---
@@ -160,33 +162,27 @@ publish and nothing is written to the target.
 python -m pytest tests/ -q
 ```
 
-**The green bar is not currently green, and CI cannot tell you that.**
-
-| Fact | Value (verified 2026-08-14, this worktree, Python 3.12) |
+| Fact | Value (verified 2026-08-15, worktree `fix/discovery-walk-resilience`, Python 3.12) |
 |---|---|
-| Result | **133 passed, 1 failed** |
-| Failing test | `tests/plugin/test_pilot_skcomms.py::test_skcomms_builds_and_validates` |
-| Cause | The test invokes `skskills plugin build` with no `--roots` override, so discovery walks the developer's real skill homes. On this host `~/clawd/skills/skcomm/SKILL.md` is a dangling symlink; `plugin/discovery.py:32` calls `read_text()` on it unguarded and raises `FileNotFoundError`. The test therefore depends on host filesystem state it does not control. |
+| Result | **137 passed, 0 failed** |
+| Previously | 133 passed, 1 failed. `tests/plugin/test_pilot_skcomms.py::test_skcomms_builds_and_validates` invoked `skskills plugin build` with no `--roots` override, so discovery walked the developer's real skill homes and hit a dangling `SKILL.md` symlink. Fixed two ways under card 748c82f9: the walk now skips an unreadable `SKILL.md` instead of aborting, and the test passes its own `--roots` pinned to this repo's `skills/` dir so it no longer depends on host state. |
 
-### The release gate is broken, on purpose-looking but not on purpose
+### The release gate
 
-`.github/workflows/ci.yml` runs:
+`.github/workflows/ci.yml` runs the suite with no `|| true`, so a red suite fails the
+run. `.github/workflows/publish.yml` repeats the same job and gates `publish-pypi` and
+`publish-npm` on plain `needs: test` with no `if: always()`, so failing tests block
+both publishes.
 
-```
-- run: python -m pytest tests/ -v --tb=short || true
-```
-
-`|| true` means **the test job can never fail the run**. `.github/workflows/publish.yml`
-repeats the same job, then declares `publish-pypi` and `publish-npm` with
-`needs: test` **plus** `if: always()`. Taken together: a total test wipe-out still
-publishes to PyPI and to npm.
-
-- The `|| true` was **left in place deliberately** by this docs pass, because removing
-  it while a test genuinely fails would turn `main` red. Fixing the test and then
-  removing `|| true` is tracked as coordination card **62a5256d**.
-- **Do not cite CI green as evidence that anything works in this repo.** Only the
-  `lint` job (`ruff check src/`, ruff pinned to 0.15.4) and `secret-scan.yml`
-  (gitleaks 8.28.0, full history, `--exit-code 1`) can actually fail a run today.
+- This was **not** always true. Until card **62a5256d** both files used
+  `python -m pytest tests/ -v --tb=short || true`, and both publish jobs carried
+  `needs: test` **plus** `if: always()`, meaning a total test wipe-out still shipped to
+  PyPI and npm. If you see either pattern come back in a diff, it is a regression.
+- Jobs that can fail a run today: `test` and `lint` (`ruff check src/`, ruff pinned to
+  0.15.4) in `ci.yml`, `docs-check.yml`, and `secret-scan.yml` (gitleaks 8.28.0, full
+  history, `--exit-code 1`).
+- `ruff check` covers `src/` only. `tests/` is not linted and does not currently pass
+  `ruff check`.
 
 ### Self-report
 
@@ -233,7 +229,8 @@ in five places), a release means:
 1. Decide the version once.
 2. Update **all five** files in the same commit.
 3. Add a dated `CHANGELOG.md` entry.
-4. Confirm `python -m pytest tests/ -q` is genuinely green, because CI will not.
+4. Confirm `python -m pytest tests/ -q` is green locally. CI also enforces this now,
+   and the `test` job blocks both publish jobs.
 5. Tag `vX.Y.Z` and push **the tag only after** the branch is merged.
 
 > **Never push a tag speculatively.** A `v*` tag publishes to PyPI and npm
@@ -417,14 +414,14 @@ tool list as stale until either the module is written or the manifest is correct
 
 | Symptom | Check |
 |---|---|
-| `skskills plugin build` or `discover` exits with `FileNotFoundError: .../SKILL.md` | A dangling symlink or unreadable `SKILL.md` in one of the ten roots. `discovery.py:32` reads it unguarded and the whole walk aborts. Find it: `for f in ~/clawd/skills/*/SKILL.md ~/clawd/skskills/skills/*/SKILL.md; do [ -e "$f" ] || echo "broken: $f"; done`. Remove the broken link or pass `--roots` with a narrowed config. |
+| A skill you expect is missing from `skskills plugin discover` | Its `SKILL.md` is probably unreadable (dangling symlink, permissions). Since card 748c82f9 the walk skips it and logs `skipping unreadable SKILL.md <path>: <reason>` at WARNING instead of aborting, so run with logging on to see it. Find broken links directly: `for f in ~/clawd/skills/*/SKILL.md ~/clawd/skskills/skills/*/SKILL.md; do [ -e "$f" ] || echo "broken: $f"; done`. Repoint or remove the link. |
 | `plugin build --plugin X` says `no plugin named 'X'` | `X` is not in the top-level `plugins:` list of `catalog.yaml` (line 425 onward), or discovery found no skill matching its `include_tags` / `include_names`. Run `skskills plugin discover` first. |
 | A skill installs but its tools never appear in the MCP client | It is disabled, or in the wrong namespace. Check `skskills list --agent <agent>`, then call the `skskills.health` MCP tool: a `degraded` status lists exactly which entrypoints failed to resolve. |
 | Two skills expose the same tool name | Expected and non-fatal. Qualified `skill.tool` names stay unique. Call `skskills.collisions` to see the overlap set. |
 | `skskills list` shows a skill as signed but you cannot tell by whom | The `signed` column reflects only that `signature` and `signed_by` are non-empty strings. **Nothing verifies them.** See [SECURITY.md](SECURITY.md). |
 | Registry writes land somewhere unexpected | `SKSKILLS_HOME` is set. `echo $SKSKILLS_HOME`; unset it to fall back to `~/.skskills`. |
-| CI is green but the code is broken | Expected. `ci.yml` runs pytest with `|| true`. Run `python -m pytest tests/ -q` locally and read the count. Card 62a5256d. |
-| A tag published a broken release | `publish.yml` uses `needs: test` with `if: always()`, so failing tests do not block publish. Yank on the registry and ship a patch; see §5.3. |
+| CI is green but the code is broken | Check the `test` job actually ran the suite. If a diff reintroduced `|| true` on the pytest step, CI green means nothing. Card 62a5256d removed it. |
+| A tag published a broken release | The `test` job in `publish.yml` gates both publish jobs, so this should now be blocked. If it shipped anyway, check whether `if: always()` came back on `publish-pypi` / `publish-npm`. Yank on the registry and ship a patch; see §5.3. |
 | `skskills publish` refuses with `BLOCKED:` lines | The scrub gate found a secret or a private endpoint in the emitted artifacts, or `publish: true` / `--i-am-chef` is missing. Read each reason; **do not** weaken `scrub.py` to get past a real finding. |
 
 ---
@@ -477,7 +474,7 @@ available on 2026-08-14:
    workstation.** The 4-vs-83 canonical/incubator count is verified for this host only.
 
 <!-- docs-evidence
-verified: 2026-08-14
+verified: 2026-08-15
 checks:
   - name: console entry points match pyproject
     run: grep -qF 'skskills = "skskills.cli:main"' pyproject.toml && grep -qF 'skskills-aggregator = "skskills.aggregator:main"' pyproject.toml
@@ -493,6 +490,12 @@ checks:
     run: grep -qF '"--i-am-chef"' src/skskills/plugin/cli.py && grep -qF 'ghp_' src/skskills/plugin/scrub.py
   - name: documented defect still present, root skill.yaml points at a missing module
     run: test ! -e src/skskills/skill.py && grep -qF 'skskills.skill:list_tools' skill.yaml
-  - name: documented defect still present, CI test step cannot fail the run
-    run: grep -qF 'python -m pytest tests/ -v --tb=short || true' .github/workflows/ci.yml
+  - name: CI test step can fail the run, no `|| true` anywhere in ci.yml
+    run: grep -qF 'run: python -m pytest tests/ -v --tb=short' .github/workflows/ci.yml && ! grep -q '|| true' .github/workflows/ci.yml
+  - name: publish jobs are gated on tests, no `|| true` and no `if: always()`
+    run: ! grep -q '|| true' .github/workflows/publish.yml && ! grep -q 'if: always()' .github/workflows/publish.yml && test "$(grep -c 'needs: test' .github/workflows/publish.yml)" = 2
+  - name: the discovery walk guards its SKILL.md read
+    run: grep -qF 'def _read_skill_md' src/skskills/plugin/discovery.py && grep -qF 'skipping unreadable SKILL.md' src/skskills/plugin/discovery.py
+  - name: the skcomms pilot test is hermetic, it pins its own roots
+    run: grep -qF '"--roots", _hermetic_roots(tmp_path)' tests/plugin/test_pilot_skcomms.py
 -->
