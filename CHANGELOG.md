@@ -28,13 +28,44 @@ Versioning intent: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Fixed
+- **The discovery walk no longer aborts on one unreadable `SKILL.md`.**
+  `plugin/discovery.py` called `read_text()` unguarded on every `SKILL.md` it
+  walked, so a single dangling symlink raised `FileNotFoundError` and killed
+  discovery across all ten configured roots. Reads now go through
+  `_read_skill_md()`, which logs `skipping unreadable SKILL.md <path>: <reason>` at
+  WARNING and skips that one skill. `skill.yaml` reads are guarded the same way.
+  Card **748c82f9**.
+- **`tests/plugin/test_pilot_skcomms.py::test_skcomms_builds_and_validates` is now
+  hermetic.** It passes its own `--roots` pinned to this repo's `skills/` dir
+  instead of walking the developer's real `~/clawd` and `~/.claude` trees, so it no
+  longer depends on host filesystem state and can pass on a bare CI runner. Suite
+  goes from 133 passed / 1 failed to 138 passed / 0 failed, verified on Python 3.11
+  and 3.12. Card **748c82f9**.
+- **CI can fail again.** Removed `|| true` from the pytest step in `ci.yml` and in
+  `publish.yml`, and removed `if: always()` from `publish-pypi` and `publish-npm`,
+  which together let a fully red suite publish to PyPI and npm. Card **62a5256d**.
+  The very first run of the un-guarded gate did its job immediately: it caught a
+  version-dependent test that was green on 3.12 and red on 3.10/3.11. `Path.glob`
+  yields a dangling symlink on Python 3.12+ but silently drops it on 3.11 and
+  earlier, so an assertion that the skip was logged at WARNING could never hold on
+  the older legs. The behavioural assertion (the walk continues) is version
+  independent and stays in the discovery test; the WARNING is now asserted by
+  calling `_read_skill_md` directly. Documented in SOP.md section 4.
+
+### Changed
+- `SOP.md` §3, §4, §5.2, §8 and its `docs-evidence` block rewritten to match the
+  above. Three checks that pinned the broken state (the `|| true` in `ci.yml`) are
+  replaced by four that pin the fixed state and fail if either regression returns.
+
 ### Added
 - `SOP.md`, `SECURITY.md`, `CONTRIBUTING.md`, `CODE_OF_CONDUCT.md`, and this
   `CHANGELOG.md`, bringing the repo to SK_REPO_DOC_STANDARD.
-- `.github/workflows/docs-check.yml`, running the shared sk-standards docs gate at
-  tiers 1 and 2.
-- A `docs-evidence` block at the end of `SOP.md`: eight repo-local checks that fail
-  when a documented entry point, default, root count, or known defect drifts.
+- `.github/workflows/docs-check.yml`, running the shared sk-standards docs gate.
+  Now at `tiers: "1,2,3"`, so the `docs-evidence` block is executed on every push.
+- A `docs-evidence` block at the end of `SOP.md`: 11 repo-local checks that fail
+  when a documented entry point, default, root count, CI gate, or known defect
+  drifts.
 
 ### Documented (no code change)
 - **The multi-root skill topology.** `src/skskills/plugin/skill-roots.yaml` declares
@@ -49,17 +80,17 @@ Versioning intent: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `skskills.skill:list_tools`, `:install`, `:catalog`, and `:run_tool`, but
   `src/skskills/skill.py` is absent from `origin/main`. Any consumer resolving those
   dotpaths fails. The working tool surface is the aggregator's.
-- **CI cannot fail on a test failure.** `ci.yml` runs pytest with `|| true`;
-  `publish.yml` repeats that job and declares both publish jobs with `needs: test`
-  plus `if: always()`, so a total test failure still ships to PyPI and npm. Tracked
-  as coordination card **62a5256d**. Left in place by this docs pass because the
-  suite is currently 133 passed / 1 failed, and removing `|| true` first would only
-  turn `main` red.
-- **The failing test is not hermetic.**
-  `tests/plugin/test_pilot_skcomms.py::test_skcomms_builds_and_validates` invokes
-  `skskills plugin build` with no `--roots` override, so discovery walks the
-  developer's real skill homes; `plugin/discovery.py:32` reads each `SKILL.md`
-  unguarded and a dangling symlink aborts the whole walk.
+- ~~**CI cannot fail on a test failure.**~~ Superseded within this same Unreleased
+  block: fixed above under card **62a5256d**. The original finding was that `ci.yml`
+  ran pytest with `|| true`, `publish.yml` repeated that job, and both publish jobs
+  carried `needs: test` plus `if: always()`, so a total test failure still shipped to
+  PyPI and npm. It was left in place by the docs pass only because the suite was red.
+- ~~**The failing test is not hermetic.**~~ Superseded within this same Unreleased
+  block: fixed above under card **748c82f9**. The original finding was that
+  `tests/plugin/test_pilot_skcomms.py::test_skcomms_builds_and_validates` invoked
+  `skskills plugin build` with no `--roots` override, so discovery walked the
+  developer's real skill homes, and `plugin/discovery.py` read each `SKILL.md`
+  unguarded so a dangling symlink aborted the whole walk.
 
 ### Not changed
 - The license stays **GPL-3.0-or-later**. `LICENSE` is verbatim GPLv3 and both

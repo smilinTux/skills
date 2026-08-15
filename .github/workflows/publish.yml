@@ -20,11 +20,13 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
       - run: pip install -e ".[dev]" || pip install -e .
-      - run: python -m pytest tests/ -v --tb=short || true
+      # This job is the release gate for PyPI and npm. It must be able to
+      # fail. Never suffix it with a success-swallowing shell guard, and
+      # never let the publish jobs run unconditionally. See card 62a5256d.
+      - run: python -m pytest tests/ -v --tb=short
 
   publish-pypi:
     needs: test
-    if: always()
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -40,7 +42,6 @@ jobs:
 
   publish-npm:
     needs: test
-    if: always()
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

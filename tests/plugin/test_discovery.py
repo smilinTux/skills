@@ -1,7 +1,13 @@
 # tests/plugin/test_discovery.py
+import logging
 from pathlib import Path
 
-from skskills.plugin.discovery import discover, load_roots, parse_frontmatter
+from skskills.plugin.discovery import (
+    _read_skill_md,
+    discover,
+    load_roots,
+    parse_frontmatter,
+)
 from skskills.plugin.models import Root
 
 
@@ -59,6 +65,60 @@ def test_discover_missing_skill_yaml_marks_degraded(tmp_path):
     _make_skill(root, "solo", "no yaml")
     rec = discover([Root(path=root, runtime="skskills", role="canonical")])[0]
     assert rec.degraded is True
+
+
+def test_discover_skips_dangling_symlink_and_keeps_walking(tmp_path):
+    """A dangling SKILL.md symlink skips ONE skill, it does not abort the walk.
+
+    The broken skill sorts between the two good ones on purpose: before the fix
+    the read raised out of the loop and `zulu` was never reached.
+
+    Note this only exercises the guard on Python >= 3.12. Python 3.11's
+    `Path.glob` silently drops a dangling symlink, so on 3.11 the entry never
+    reaches the read at all. Either way the required behaviour is identical and
+    is what is asserted here: both good skills come back. The WARNING itself is
+    asserted in test_read_skill_md_logs_and_returns_none, which calls the reader
+    directly and so does not depend on glob semantics.
+    """
+    root = tmp_path / "skskills"
+    _make_skill(root, "alpha", "before the broken one")
+    _make_skill(root, "zulu", "after the broken one")
+    broken = root / "mmm-broken"
+    broken.mkdir()
+    (broken / "SKILL.md").symlink_to(tmp_path / "gone" / "SKILL.md")
+    assert not (broken / "SKILL.md").exists()  # really dangling
+
+    recs = discover([Root(path=root, runtime="skskills", role="canonical")])
+
+    names = {r.name for r in recs}
+    assert names == {"alpha", "zulu"}, "the walk must continue past the broken link"
+
+
+def test_read_skill_md_logs_and_returns_none(tmp_path, caplog):
+    """An unreadable SKILL.md returns None and says so at WARNING. Never silent."""
+    md = tmp_path / "SKILL.md"
+    md.symlink_to(tmp_path / "nope" / "SKILL.md")
+
+    with caplog.at_level(logging.WARNING, logger="skskills.plugin.discovery"):
+        assert _read_skill_md(md) is None
+
+    msgs = [r.getMessage() for r in caplog.records if r.levelno >= logging.WARNING]
+    assert any(str(md) in m for m in msgs), f"path not logged; got {msgs}"
+
+
+def test_parse_frontmatter_unreadable_returns_empty(tmp_path):
+    md = tmp_path / "SKILL.md"
+    md.symlink_to(tmp_path / "nope" / "SKILL.md")
+    assert parse_frontmatter(md) == {}
+
+
+def test_discover_survives_unreadable_skill_yaml(tmp_path):
+    root = tmp_path / "skskills"
+    _make_skill(root, "solo", "yaml is a dangling link")
+    (root / "solo" / "skill.yaml").symlink_to(tmp_path / "gone" / "skill.yaml")
+    recs = discover([Root(path=root, runtime="skskills", role="canonical")])
+    assert [r.name for r in recs] == ["solo"]
+    assert recs[0].degraded is True
 
 
 def test_load_roots_expands_home(tmp_path):
