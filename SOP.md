@@ -162,9 +162,9 @@ publish and nothing is written to the target.
 python -m pytest tests/ -q
 ```
 
-| Fact | Value (verified 2026-08-15, worktree `fix/discovery-walk-resilience`, Python 3.12) |
+| Fact | Value (verified 2026-08-15, worktree `fix/discovery-walk-resilience`, Python 3.11 and 3.12) |
 |---|---|
-| Result | **137 passed, 0 failed** |
+| Result | **138 passed, 0 failed** on both |
 | Previously | 133 passed, 1 failed. `tests/plugin/test_pilot_skcomms.py::test_skcomms_builds_and_validates` invoked `skskills plugin build` with no `--roots` override, so discovery walked the developer's real skill homes and hit a dangling `SKILL.md` symlink. Fixed two ways under card 748c82f9: the walk now skips an unreadable `SKILL.md` instead of aborting, and the test passes its own `--roots` pinned to this repo's `skills/` dir so it no longer depends on host state. |
 
 ### The release gate
@@ -183,6 +183,18 @@ both publishes.
   history, `--exit-code 1`).
 - `ruff check` covers `src/` only. `tests/` is not linted and does not currently pass
   `ruff check`.
+
+> **Python 3.11 and earlier hide dangling symlinks from `Path.glob`.** On 3.12+,
+> `base.glob("*/SKILL.md")` yields a `SKILL.md` that is a broken symlink, and the
+> guard in `discovery._read_skill_md` is what keeps the walk alive. On 3.10/3.11 the
+> entry is dropped before the read is ever attempted. Same observable outcome, two
+> different mechanisms, so a test that asserts the WARNING was logged passes on 3.12
+> and fails on 3.11. `tests/plugin/test_discovery.py` splits this deliberately:
+> `test_discover_skips_dangling_symlink_and_keeps_walking` asserts only that the walk
+> continues (true on every version), and
+> `test_read_skill_md_logs_and_returns_none` calls the reader directly so the WARNING
+> assertion does not depend on glob semantics. The CI matrix covers 3.10, 3.11 and
+> 3.12, so a version-dependent test will be caught.
 
 ### Self-report
 

@@ -40,10 +40,18 @@ Versioning intent: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   hermetic.** It passes its own `--roots` pinned to this repo's `skills/` dir
   instead of walking the developer's real `~/clawd` and `~/.claude` trees, so it no
   longer depends on host filesystem state and can pass on a bare CI runner. Suite
-  goes from 133 passed / 1 failed to 137 passed / 0 failed. Card **748c82f9**.
+  goes from 133 passed / 1 failed to 138 passed / 0 failed, verified on Python 3.11
+  and 3.12. Card **748c82f9**.
 - **CI can fail again.** Removed `|| true` from the pytest step in `ci.yml` and in
   `publish.yml`, and removed `if: always()` from `publish-pypi` and `publish-npm`,
   which together let a fully red suite publish to PyPI and npm. Card **62a5256d**.
+  The very first run of the un-guarded gate did its job immediately: it caught a
+  version-dependent test that was green on 3.12 and red on 3.10/3.11. `Path.glob`
+  yields a dangling symlink on Python 3.12+ but silently drops it on 3.11 and
+  earlier, so an assertion that the skip was logged at WARNING could never hold on
+  the older legs. The behavioural assertion (the walk continues) is version
+  independent and stays in the discovery test; the WARNING is now asserted by
+  calling `_read_skill_md` directly. Documented in SOP.md section 4.
 
 ### Changed
 - `SOP.md` §3, §4, §5.2, §8 and its `docs-evidence` block rewritten to match the
