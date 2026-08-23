@@ -416,6 +416,48 @@ skills:
     tags: [productivity, output-style, adhd, formatting]
     category: productivity
 
+  - name: ponytail
+    local: ~/clawd/skills/ponytail
+    git: https://github.com/DietrichGebert/ponytail
+    description: "Lazy-senior-dev coding mode: simplest, shortest, most minimal solution that works. YAGNI first, stdlib before custom code, native before dependencies. Levels: lite/full/ultra. Vendored from DietrichGebert/ponytail v4.9.0, invoke with /ponytail."
+    tags: [productivity, coding, yagni, simplification, code-review]
+    category: productivity
+
+  - name: ponytail-review
+    local: ~/clawd/skills/ponytail-review
+    git: https://github.com/DietrichGebert/ponytail
+    description: "Diff review focused only on over-engineering: reinvented stdlib, unneeded deps, speculative abstractions. One line per finding. Vendored from DietrichGebert/ponytail v4.9.0, invoke with /ponytail-review."
+    tags: [productivity, coding, code-review, simplification]
+    category: productivity
+
+  - name: ponytail-audit
+    local: ~/clawd/skills/ponytail-audit
+    git: https://github.com/DietrichGebert/ponytail
+    description: "Whole-repo audit for over-engineering, ranked list of what to delete/simplify/replace with stdlib. Vendored from DietrichGebert/ponytail v4.9.0, invoke with /ponytail-audit."
+    tags: [productivity, coding, code-review, simplification, audit]
+    category: productivity
+
+  - name: ponytail-debt
+    local: ~/clawd/skills/ponytail-debt
+    git: https://github.com/DietrichGebert/ponytail
+    description: "Harvests `ponytail:` shortcut comments into a debt ledger so deferrals get tracked. Vendored from DietrichGebert/ponytail v4.9.0, invoke with /ponytail-debt."
+    tags: [productivity, coding, tech-debt, audit]
+    category: productivity
+
+  - name: ponytail-gain
+    local: ~/clawd/skills/ponytail-gain
+    git: https://github.com/DietrichGebert/ponytail
+    description: "One-shot benchmark scoreboard of ponytail's measured impact: less code, less cost, more speed. Vendored from DietrichGebert/ponytail v4.9.0, invoke with /ponytail-gain."
+    tags: [productivity, coding, benchmarks]
+    category: productivity
+
+  - name: ponytail-help
+    local: ~/clawd/skills/ponytail-help
+    git: https://github.com/DietrichGebert/ponytail
+    description: "Quick-reference card for all ponytail modes, skills, and commands. Vendored from DietrichGebert/ponytail v4.9.0, invoke with /ponytail-help."
+    tags: [productivity, coding, reference]
+    category: productivity
+
   - name: supabase-deploy-integration
     local: ~/clawd/skills/supabase-deploy-integration
     description: "Deploy Supabase-powered applications to Vercel, Fly.io, and Cloud Run with platform-specific secret configuration and deployment pipelines."
