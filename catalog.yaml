@@ -409,6 +409,13 @@ skills:
     tags: [writing, editing, anti-ai-slop]
     category: writing
 
+  - name: i-have-adhd
+    local: ~/clawd/skills/i-have-adhd
+    git: https://github.com/ayghri/i-have-adhd
+    description: "ADHD-friendly output shaping: lead with the next action, number steps, restate state, suppress tangents, no preamble/recap/closers. Vendored from ayghri/i-have-adhd v0.2.0, invoke with /i-have-adhd."
+    tags: [productivity, output-style, adhd, formatting]
+    category: productivity
+
   - name: supabase-deploy-integration
     local: ~/clawd/skills/supabase-deploy-integration
     description: "Deploy Supabase-powered applications to Vercel, Fly.io, and Cloud Run with platform-specific secret configuration and deployment pipelines."
