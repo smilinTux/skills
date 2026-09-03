@@ -1,7 +1,7 @@
 """SKSkills Remote Registry — publish, discover, and install skills from remote hubs.
 
 Supports two transport modes:
-  - HTTP registry: JSON API at a well-known URL (e.g., https://skills.smilintux.org/api)
+  - HTTP registry: JSON API at a well-known URL (e.g., https://skskills.skworld.io/api)
   - Git repo: clone a skill repository and install from it
 
 Remote registry protocol (HTTP):
@@ -33,7 +33,27 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger("skskills.remote")
 
-DEFAULT_REGISTRY_URL = "https://skills.smilintux.org/api"
+# Suffixes that mark a download_url as an actual skill package rather than a
+# project page. The hub sets download_url to e.g. a GitHub repo URL for pointer
+# entries; fetching one yields HTML, which used to surface as "not a gzip file".
+_TARBALL_SUFFIXES = (".tar.gz", ".tgz", ".tar")
+_GZIP_MAGIC = b"\x1f\x8b"
+
+
+def _looks_like_tarball(url: str) -> bool:
+    """True when ``url`` names a skill package we can download and extract.
+
+    Args:
+        url: The entry's ``download_url``.
+
+    Returns:
+        True if the URL path ends in a tarball suffix.
+    """
+    import urllib.parse
+
+    return urllib.parse.urlparse(url).path.endswith(_TARBALL_SUFFIXES)
+
+DEFAULT_REGISTRY_URL = "https://skskills.skworld.io/api"
 
 
 class RemoteSkillEntry(BaseModel):
@@ -45,6 +65,12 @@ class RemoteSkillEntry(BaseModel):
     author: str = ""
     download_url: str = ""
     sha256: str = Field(default="", description="SHA-256 hash of the tarball")
+    # The hub publishes many skills as *pointers* — a pip package or a git repo
+    # — rather than as a hosted tarball. Keep those coordinates; ``pull`` needs
+    # them whenever ``download_url`` is a project page instead of a package.
+    pip: str = Field(default="", description="PyPI package providing this skill")
+    git: str = Field(default="", description="Git repository providing this skill")
+    category: str = ""
     tags: list[str] = Field(default_factory=list)
     signed: bool = False
     signed_by: str = ""
@@ -224,6 +250,15 @@ class RemoteRegistry:
         tarball_path = self.cache_dir / tarball_name
         self._http_download(entry.download_url, tarball_path)
 
+        # A pointer entry served HTML (a project page), not a package.
+        if tarball_path.read_bytes()[:2] != _GZIP_MAGIC:
+            tarball_path.unlink(missing_ok=True)
+            raise ValueError(
+                f"{entry.download_url} did not serve a gzip tarball for '{name}'. "
+                f"This registry entry is a pointer - install it from its pip/git "
+                f"coordinates (RemoteRegistry.pull does this automatically)."
+            )
+
         # Verify checksum
         if entry.sha256:
             actual_hash = hashlib.sha256(tarball_path.read_bytes()).hexdigest()
@@ -279,9 +314,34 @@ class RemoteRegistry:
         """
         from .registry import SkillRegistry
 
-        skill_dir = self.download(name, version)
+        entry = self.get_skill_info(name, version)
+        if entry is None:
+            raise FileNotFoundError(f"Skill not found in remote registry: {name}")
+
         registry = SkillRegistry()
-        return registry.install(skill_dir, agent=agent, force=force)
+
+        # Hosted package: download, verify and extract it.
+        if _looks_like_tarball(entry.download_url):
+            skill_dir = self.download(name, version)
+            return registry.install(skill_dir, agent=agent, force=force)
+
+        # Pointer entry: the hub published coordinates, not a package. Install
+        # from those instead of fetching the project page as if it were a tarball.
+        if entry.pip:
+            from .pip_bridge import install_from_pip
+
+            logger.info("pull: %s is a pointer entry, installing from pip %s", name, entry.pip)
+            return install_from_pip(entry.pip, registry, agent=agent, force=force)
+
+        if entry.git:
+            logger.info("pull: %s is a pointer entry, cloning %s", name, entry.git)
+            skill_dir = self.from_git(entry.git)
+            return registry.install(skill_dir, agent=agent, force=force)
+
+        raise ValueError(
+            f"Registry entry '{name}' declares no installable source: "
+            f"download_url is not a tarball and no pip/git coordinate is set."
+        )
 
     @staticmethod
     def package(skill_dir: Path, output_dir: Optional[Path] = None) -> Path:
